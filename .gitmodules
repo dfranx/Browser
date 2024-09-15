@@ -1,0 +1,3 @@
+[submodule "libs/myhtml"]
+	path = libs/myhtml
+	url = https://github.com/lexborisov/myhtml/
