@@ -65,6 +65,7 @@ int main(int argc, char* argv[])
         std::ifstream cssFile("default.css");
         std::string cssContent((std::istreambuf_iterator<char>(cssFile)),
             std::istreambuf_iterator<char>());
+        document.LoadDefaultStyles(cssContent.c_str(), cssContent.size());
     }
 
     std::ifstream htmlFile("web.html");
