@@ -1,20 +1,21 @@
-#include <BrowserJam/Elements/PageElement.h>
-#include <BrowserJam/Style.h>
-
-#include "BrowserJam/Document.h"
-#include "BrowserJam/Renderer.h"
-#include "BrowserJam/StyleFactory.h"
-#include <BrowserJam/Cursor.h>
+#include <Browser/Elements/PageElement.h>
+#include <Browser/Style.h>
+#include <Browser/Document.h>
+#include <Browser/Renderer.h>
+#include <Browser/StyleFactory.h>
+#include <Browser/Cursor.h>
 
 
 using namespace sb;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 PageElement::PageElement(const char* tag, Document* doc, PageElement* parent):
     mTag(tag), mDocument(doc), mParent(parent)
 {
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 DisplayType PageElement::GetDisplayType() const
 {
     if (mStyle && mStyle->Has(StylePropertyId_Display))
@@ -24,12 +25,14 @@ DisplayType PageElement::GetDisplayType() const
     return DisplayType_Block;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void PageElement::OnMouseMove(float x, float y)
 {
     bool handled = false;
 
     if (mStyle)
     {
+        // Handle the cursor: property
         if (mStyle->Has(StylePropertyId_Cursor))
         {
             Cursor cursor = Unbox<Cursor>(mStyle->Get(StylePropertyId_Cursor));
@@ -45,6 +48,7 @@ void PageElement::OnMouseMove(float x, float y)
         }
     }
 
+    // If we haven't handled the event in this element, forward it to relevant children
     if (!handled)
     {
         for (auto& child: mChildren)
@@ -57,10 +61,12 @@ void PageElement::OnMouseMove(float x, float y)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void PageElement::OnMouseDown(float x, float y)
 {
     bool handled = false;
 
+    // Link has been clicked
     if (mTag == "a")
     {
         std::string link = mAttributes["href"];
@@ -68,6 +74,7 @@ void PageElement::OnMouseDown(float x, float y)
         handled = true;
     }
 
+    // Forward the event to the relevant children
     if (!handled)
     {
         for (auto& child: mChildren)
@@ -80,12 +87,12 @@ void PageElement::OnMouseDown(float x, float y)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Point PageElement::Arrange(const Rect& availableSpace, Point cursor, float blockAdvance)
 {
     mStyle = mDocument->GetStyleFactory().ComputeStyle(this);
 
     Thickness margin, padding;
-
     if (mStyle->Has(StylePropertyId_Margin))
     {
         margin = Unbox<Thickness>(mStyle->Get(StylePropertyId_Margin));
@@ -95,6 +102,7 @@ Point PageElement::Arrange(const Rect& availableSpace, Point cursor, float block
         padding = Unbox<Thickness>(mStyle->Get(StylePropertyId_Padding));
     }
 
+    // Calculate the available space for this element and it's children & position the "cursor"
     Rect contentSpace = availableSpace;
     contentSpace.x = cursor.x + margin.left + padding.left;
     contentSpace.y = cursor.y + margin.top + padding.top;
@@ -104,9 +112,11 @@ Point PageElement::Arrange(const Rect& availableSpace, Point cursor, float block
     DisplayType display = GetDisplayType();
     if (display == DisplayType_Block)
     {
+        // If this element is display:block, move the cursor to the left most side and by Y coord
         contentSpace.x = availableSpace.x + margin.left + padding.left;
+        contentSpace.y = cursor.y + blockAdvance + margin.top + padding.top;
         cursor.x = contentSpace.x;
-        cursor.y = cursor.y + blockAdvance + margin.top + padding.top;
+        cursor.y = contentSpace.y;
     }
 
     Point myCursor = cursor; // Store the original cursor position
@@ -119,12 +129,24 @@ Point PageElement::Arrange(const Rect& availableSpace, Point cursor, float block
     {
         cursor = child->Arrange(contentSpace, cursor, childBlockHeight);
 
+        // Get the max positions of the space taken by this child
         const Rect& lb = child->GetLayoutBounds();
         childrenBottom = std::max<float>(childrenBottom, lb.y + lb.height);
         childrenRight = std::max<float>(childrenRight, lb.x + lb.width);
-        childBlockHeight = lb.height;
+
+        // Based on display, update the y advance for the element
+        DisplayType childDisplay = child->GetDisplayType();
+        if (childDisplay == DisplayType_Inline)
+        {
+            childBlockHeight = std::max<float>(lb.height, childBlockHeight);
+        }
+        else
+        {
+            childBlockHeight = lb.height;
+        }
     }
 
+    // Store the layout values for this element
     mLayoutBounds = Thickness(myCursor.x - margin.left - padding.left,
         myCursor.y - margin.top - padding.top,
         childrenRight + margin.right + padding.right,
@@ -132,19 +154,29 @@ Point PageElement::Arrange(const Rect& availableSpace, Point cursor, float block
     mContentBounds = Thickness(myCursor.x - padding.left, myCursor.y - padding.top,
         childrenRight + padding.right, childrenBottom + padding.bottom).AsRect();
 
+    // Return the cursor position to where to place the next element (if inline)
     return { mLayoutBounds.x + mLayoutBounds.width, mLayoutBounds.y };
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void PageElement::Render()
 {
     auto rt = mDocument->GetRenderer()->GetRenderTarget();
 
     // Draw background
-    if (mStyle && !mTag.empty())
+    if (mStyle)
     {
-        float borderRadius = Unbox<Thickness>(mStyle->GetOrDefaultValue(StylePropertyId_BorderRadius).get()).left;
+        float borderRadius = Unbox<Thickness>(
+            mStyle->GetOrDefaultValue(StylePropertyId_BorderRadius).get()).left;
+
         D2D1_ROUNDED_RECT roundedRect;
-        roundedRect.rect = { mContentBounds.x, mContentBounds.y, mContentBounds.x + mContentBounds.width, mContentBounds.y + mContentBounds.height };
+        roundedRect.rect =
+        {
+            mContentBounds.x,
+            mContentBounds.y,
+            mContentBounds.x + mContentBounds.width,
+            mContentBounds.y + mContentBounds.height
+        };
         roundedRect.radiusX = borderRadius;
         roundedRect.radiusY = borderRadius;
 
@@ -165,7 +197,8 @@ void PageElement::Render()
         if (mStyle->Has(StylePropertyId_BorderWidth))
         {
             Thickness border = Unbox<Thickness>(mStyle->Get(StylePropertyId_BorderWidth));
-            Color color = Unbox<Color>(mStyle->GetOrDefaultValue(StylePropertyId_BorderColor)->Clone().get());
+            Color color = Unbox<Color>(
+                mStyle->GetOrDefaultValue(StylePropertyId_BorderColor)->Clone().get());
 
             ID2D1SolidColorBrush* brush = mDocument->CreateSolidColorBrush(color.AsUInt32());
 
@@ -180,6 +213,9 @@ void PageElement::Render()
         }
     }
 
+    // Draw children
     for (auto& child : mChildren)
+    {
         child->Render();
+    }
 }

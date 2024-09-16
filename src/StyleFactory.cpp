@@ -1,9 +1,9 @@
-#include <BrowserJam/StyleFactory.h>
-#include <BrowserJam/StyleProperty.h>
-#include <BrowserJam/Style.h>
-#include <BrowserJam/Tools.h>
-#include <BrowserJam/Cursor.h>
-#include <BrowserJam/Elements/PageElement.h>
+#include <Browser/StyleFactory.h>
+#include <Browser/StyleProperty.h>
+#include <Browser/Style.h>
+#include <Browser/Tools.h>
+#include <Browser/Cursor.h>
+#include <Browser/Elements/PageElement.h>
 
 #include <iostream>
 #include <string>
@@ -14,9 +14,9 @@
 using namespace sb;
 
 
-
 #define DEFINE_METADATA(id, inh, def) mMetadata[id] = { id, inh, Box(def) };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void StyleFactory::InitMetadata()
 {
     mMetadata.clear();
@@ -38,6 +38,7 @@ void StyleFactory::InitMetadata()
     DEFINE_METADATA(StylePropertyId_Cursor, true, Cursor_Default);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<BoxedValue> StyleFactory::GetDefaultValue(StylePropertyId id) const
 {
     auto it = mMetadata.find(id);
@@ -46,6 +47,7 @@ std::unique_ptr<BoxedValue> StyleFactory::GetDefaultValue(StylePropertyId id) co
     return it->second.defaultValue->Clone();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string StyleFactory::GetDefaultCSS()
 {
     return R"(body {
@@ -133,6 +135,7 @@ dt {
 })";
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 bool IsLayoutProperty(StylePropertyId id)
 {
     return id == StylePropertyId_Display ||
@@ -140,6 +143,7 @@ bool IsLayoutProperty(StylePropertyId id)
             id == StylePropertyId_Padding;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::shared_ptr<Style> StyleFactory::ComputeStyle(PageElement* element)
 {
     std::shared_ptr<Style> style;
@@ -186,6 +190,7 @@ std::shared_ptr<Style> StyleFactory::ComputeStyle(PageElement* element)
     return style;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void StyleFactory::LoadDefaultStyles(const char* css, unsigned int css_length)
 {
     InitMetadata();
@@ -248,6 +253,7 @@ void StyleFactory::LoadDefaultStyles(const char* css, unsigned int css_length)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void StyleFactory::ParseProperty(Style* style, const std::string& name, const std::string& value)
 {
     if (name == "display")
@@ -356,6 +362,7 @@ void StyleFactory::ParseProperty(Style* style, const std::string& name, const st
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 TextSize StyleFactory::ParseSize(const std::string& value)
 {
     if (value.find("em") != std::string::npos)
@@ -364,6 +371,8 @@ TextSize StyleFactory::ParseSize(const std::string& value)
     }
     return TextSize(std::stof(value));
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Color StyleFactory::ParseColor(const std::string& value)
 {
     if (value.empty())
@@ -385,28 +394,38 @@ Color StyleFactory::ParseColor(const std::string& value)
     }
     return Color::Black();
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 DisplayType StyleFactory::ParseDisplay(const std::string& value)
 {
     if (value == "inline") return DisplayType_Inline;
     return DisplayType_Block;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 TextDecoration StyleFactory::ParseTextDecoration(const std::string& value)
 {
     if (value == "underline") return TextDecoration_Underline;
     else if (value == "line-through") return TextDecoration_LineThrough;
     return TextDecoration_None;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Cursor StyleFactory::ParseCursor(const std::string& value)
 {
     if (value == "pointer") return Cursor_Pointer;
     return Cursor_Default;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 FontStyle StyleFactory::ParseFontStyle(const std::string& value)
 {
     if (value == "italic") return FontStyle_Italic;
     else if (value == "oblique") return FontStyle_Oblique;
     return FontStyle_Normal;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 FontStretch StyleFactory::ParseFontStretch(const std::string& value)
 {
     if (value == "ultra-condensed") return FontStretch_UltraCondensed;
@@ -419,6 +438,8 @@ FontStretch StyleFactory::ParseFontStretch(const std::string& value)
     else if (value == "ultra-expanded") return FontStretch_UltraExpanded;
     return FontStretch_Normal;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 FontWeight StyleFactory::ParseFontWeight(const std::string& value)
 {
     if (value == "normal") return FontWeight_Normal;
@@ -429,6 +450,8 @@ FontWeight StyleFactory::ParseFontWeight(const std::string& value)
 
     return FontWeight_Normal;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::wstring StyleFactory::ParseFontFamily(const std::string& value)
 {
     if (value.empty()) return L"Times New Roman";
@@ -440,6 +463,8 @@ std::wstring StyleFactory::ParseFontFamily(const std::string& value)
     }
     return std::wstring(value.begin(), value.end());
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Thickness StyleFactory::ParseThickness(const std::string& value)
 {
     TextSize m[4];

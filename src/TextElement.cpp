@@ -1,8 +1,8 @@
-#include <BrowserJam/Elements/TextElement.h>
-#include <BrowserJam/Document.h>
-#include <BrowserJam/Renderer.h>
-#include <BrowserJam/StyleFactory.h>
-#include <BrowserJam/Tools.h>
+#include <Browser/Elements/TextElement.h>
+#include <Browser/Document.h>
+#include <Browser/Renderer.h>
+#include <Browser/StyleFactory.h>
+#include <Browser/Tools.h>
 
 #include <d2d1.h>
 #include <limits>
@@ -11,25 +11,27 @@
 
 using namespace sb;
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 TextElement::TextElement(const wchar_t* text, const char* tag, Document* doc, PageElement* parent):
     PageElement(tag, doc, parent), mDWFormat(nullptr), mHorizontalAdvance(0.0f)
 {
     SetText(text);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Point TextElement::Arrange(const Rect& availableSpace, Point cursor, float blockAdvance)
 {
     auto dwFactory = mDocument->GetRenderer()->GetWriteFactory();
 
+    // Make it display: inline
     mStyle = mDocument->GetStyleFactory().ComputeStyle(this);
     if (!mStyle->Has(StylePropertyId_Display))
     {
         mStyle->Set(StylePropertyId_Display, Box<DisplayType>(DisplayType_Inline));
     }
 
-    mLayoutBounds = availableSpace;
-    mContentBounds = mLayoutBounds;
-
+    // Cache the text/font values
     Color textColor = Unbox<Color>(mStyle->GetOrDefaultValue(StylePropertyId_Color).get());
     std::wstring fontFamily = Unbox<std::wstring>(mStyle->GetOrDefaultValue(StylePropertyId_FontFamily).get());
     float fontSize = Unbox<float>(mStyle->GetOrDefaultValue(StylePropertyId_FontSize).get());
@@ -38,6 +40,7 @@ Point TextElement::Arrange(const Rect& availableSpace, Point cursor, float block
     FontStretch fontStretch = Unbox<FontStretch>(mStyle->GetOrDefaultValue(StylePropertyId_FontStretch).get());
     TextDecoration textDecoration = Unbox<TextDecoration>(mStyle->GetOrDefaultValue(StylePropertyId_TextDecoration).get());
 
+    // Create the brush and font
     mBrush = mDocument->CreateSolidColorBrush(textColor.AsUInt32());
     mDWFormat = mDocument->CreateTextFormat(fontFamily.data(), fontSize, fontWeight, fontStyle,
         fontStretch);
@@ -46,11 +49,12 @@ Point TextElement::Arrange(const Rect& availableSpace, Point cursor, float block
     mDocument->GetFontInformation(fontFamily.data(), fontSize, fontWeight, fontStyle, fontStretch,
         mHorizontalAdvance, mVerticalAdvance, &fontFace);
 
-    // Create text layout
+    // Create the text layout
     dwFactory->CreateTextLayout(mText.data(), mText.length(), mDWFormat,
         std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), &mDWLayout);
     mDWLayout->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
 
+    // Apply text decoration
     if (textDecoration == TextDecoration_Underline)
     {
         DWRITE_TEXT_RANGE range;
@@ -66,6 +70,7 @@ Point TextElement::Arrange(const Rect& availableSpace, Point cursor, float block
         mDWLayout->SetStrikethrough(true, range);
     }
 
+    // Get the size of the given text
     DWRITE_TEXT_METRICS metrics;
     mDWLayout->GetMetrics(&metrics);
 
@@ -79,6 +84,7 @@ Point TextElement::Arrange(const Rect& availableSpace, Point cursor, float block
     return { mLayoutBounds.x + mLayoutBounds.width, mLayoutBounds.y };
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void TextElement::Render()
 {
     auto rt = mDocument->GetRenderer()->GetRenderTarget();

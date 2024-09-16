@@ -1,11 +1,12 @@
-#include <BrowserJam/Style.h>
-#include <BrowserJam/StyleFactory.h>
-#include <BrowserJam/BoxedValue.h>
+#include <Browser/Style.h>
+#include <Browser/StyleFactory.h>
+#include <Browser/BoxedValue.h>
 
 
 using namespace sb;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<BoxedValue> Style::GetOrDefaultValue(StylePropertyId id) const
 {
     auto it = mProperties.find(id);
@@ -13,6 +14,7 @@ std::unique_ptr<BoxedValue> Style::GetOrDefaultValue(StylePropertyId id) const
     return it->second->Clone();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::shared_ptr<Style> Style::Clone() const
 {
     std::shared_ptr<Style> style = std::make_shared<Style>(mFactory);

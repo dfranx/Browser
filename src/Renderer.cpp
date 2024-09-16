@@ -1,5 +1,5 @@
-#include <BrowserJam/Renderer.h>
-#include <BrowserJam/Tools.h>
+#include <Browser/Renderer.h>
+#include <Browser/Tools.h>
 
 #include <iostream>
 
@@ -7,10 +7,12 @@
 using namespace sb;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Renderer::Renderer(): mD2DFactory(nullptr), mRenderTarget(nullptr), mDWriteFactory(nullptr)
 {
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 bool Renderer::Create(HWND hWnd)
 {
     // Create Direct2D factory
@@ -43,7 +45,8 @@ bool Renderer::Create(HWND hWnd)
     }
 
     // Initialize DirectWrite for text rendering
-    hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&mDWriteFactory));
+    hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+        reinterpret_cast<IUnknown**>(&mDWriteFactory));
     if (FAILED(hr))
     {
         std::cout << "Failed to create DirectWrite factory" << std::endl;
@@ -53,6 +56,7 @@ bool Renderer::Create(HWND hWnd)
     return true;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Renderer::Shutdown()
 {
     SafeRelease(&mRenderTarget);

@@ -6,8 +6,8 @@
 #include <dwrite.h>
 #include <wininet.h>
 
-#include <BrowserJam/Renderer.h>
-#include <BrowserJam/Document.h>
+#include <Browser/Renderer.h>
+#include <Browser/Document.h>
 
 #include <myhtml/api.h>
 
@@ -19,7 +19,6 @@
 BOOL FileExists(LPCTSTR szPath)
 {
     DWORD dwAttrib = GetFileAttributes(szPath);
-
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 

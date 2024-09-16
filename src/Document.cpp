@@ -1,9 +1,9 @@
-#include <BrowserJam/Document.h>
-#include <BrowserJam/Renderer.h>
-#include <BrowserJam/Tools.h>
-#include <BrowserJam/Cursor.h>
-#include <BrowserJam/Elements/PageElement.h>
-#include <BrowserJam/Elements/TextElement.h>
+#include <Browser/Document.h>
+#include <Browser/Renderer.h>
+#include <Browser/Tools.h>
+#include <Browser/Cursor.h>
+#include <Browser/Elements/PageElement.h>
+#include <Browser/Elements/TextElement.h>
 
 #include <iostream>
 #include <queue>
@@ -16,15 +16,18 @@
 using namespace sb;
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Document::Document(Renderer* renderer): mRenderer(renderer), mRoot(nullptr), mCursor(Cursor_Default)
 {
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::LoadDefaultStyles(const char* css, unsigned int css_length)
 {
     mStyleFactory.LoadDefaultStyles(css, css_length);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::LoadHTML(const char* html, unsigned int html_length)
 {
     Shutdown(); // Clear old data
@@ -52,6 +55,7 @@ void Document::LoadHTML(const char* html, unsigned int html_length)
         body = myhtml_tree_get_document(tree);
     }
 
+    // Create PageElements from the parsed tree
     ProcessHTMLNode(tree, body, nullptr);
 
     // Release resources
@@ -63,23 +67,28 @@ void Document::LoadHTML(const char* html, unsigned int html_length)
     PostProcess();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::OnMouseMove(float x, float y)
 {
     if (mRoot) mRoot->OnMouseMove(x, y);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::OnMouseDown(float x, float y)
 {
     if (mRoot) mRoot->OnMouseDown(x, y);
 }
 
-void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node* node, PageElement* parent)
+////////////////////////////////////////////////////////////////////////////////////////////////////
+void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node* node,
+    PageElement* parent)
 {
     while (node)
     {
         myhtml_tag_id_t tagId = myhtml_node_tag_id(node);
         const char* tagName = myhtml_tag_name_by_id(tree, tagId, NULL);
 
+        // Skip certain non-visual nodes
         if (tagId == MyHTML_TAG__UNDEF || tagId == MyHTML_TAG_COMMENT ||
             tagId == MyHTML_TAG__DOCTYPE || tagId == MyHTML_TAG_HEADER)
         {
@@ -88,7 +97,7 @@ void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node
         }
 
         PageElement* element = nullptr;
-        if (tagId == MyHTML_TAG__TEXT)
+        if (tagId == MyHTML_TAG__TEXT) // Create text element
         {
             std::string content = myhtml_node_text(node, NULL);
             Trim(content);
@@ -103,11 +112,11 @@ void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node
         }
         else
         {
+            // Create PageElement
             element = new PageElement(tagName, this, parent);
 
-
+            // Copy the attribute values to the PageElement object
             myhtml_tree_attr_t *attr = myhtml_node_attribute_first(node);
-
             while (attr)
             {
                 const char *name = myhtml_attribute_key(attr, NULL);
@@ -123,18 +132,21 @@ void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node
             }
         }
 
+        // If it's a <body>, set it as a root
         if (tagId == MyHTML_TAG_BODY)
         {
             SetRoot(element);
         }
 
+        // Add as a child
         if (parent && element)
         {
             parent->GetChildren().push_back(element);
         }
+
+        // Process this elements children
         if (element)
         {
-            // Recursively go to the child
             ProcessHTMLNode(tree, myhtml_node_child(node), element);
         }
 
@@ -143,6 +155,7 @@ void Document::ProcessHTMLNode(struct myhtml_tree* tree, struct myhtml_tree_node
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::PostProcess()
 {
     std::queue<PageElement*> q;
@@ -159,6 +172,12 @@ void Document::PostProcess()
         for (uint32_t i = 0; i < children.size(); i++)
         {
             q.push(children[i]);
+        }
+
+        // No need to group if only one child or if it's a <p>
+        if (children.size() <= 1 || cur->GetTag() == "p")
+        {
+            continue;
         }
 
         // Group inline text into <p> elements
@@ -182,7 +201,7 @@ void Document::PostProcess()
 
                 children.erase(children.begin() + inlineBlockStart, children.begin() + inlineBlockEnd);
 
-                PageElement* p = new PageElement("", this, cur);
+                PageElement* p = new PageElement("--text-group--", this, cur);
                 for (auto& el : grouped)
                 {
                     el->SetParent(p);
@@ -198,6 +217,7 @@ void Document::PostProcess()
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::RemoveHTMLWhiteSpaces(std::string& content) const
 {
     uint32_t whitespace = 0u;
@@ -224,6 +244,7 @@ void Document::RemoveHTMLWhiteSpaces(std::string& content) const
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 bool Document::IsInlineTag(PageElement* element) const
 {
     static const std::unordered_set<std::string> inline_tags = { "a", "abbr", "acronym",
@@ -236,6 +257,7 @@ bool Document::IsInlineTag(PageElement* element) const
     return tag.empty() || inline_tags.find(tag) != inline_tags.end();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::DeleteElement(PageElement* element)
 {
     if (element == nullptr) return;
@@ -247,6 +269,7 @@ void Document::DeleteElement(PageElement* element)
     delete element;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::Shutdown()
 {
     for (auto& font : mFontCache)
@@ -266,11 +289,13 @@ void Document::Shutdown()
     mRoot = nullptr;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::InvalidateLayout()
 {
-    mRoot->Arrange(GetBounds(), {0.0f, 0.0f }, 0.0f);
+    if (mRoot) mRoot->Arrange(GetBounds(), {0.0f, 0.0f }, 0.0f);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::Render()
 {
     auto rt = mRenderer->GetRenderTarget();
@@ -290,26 +315,30 @@ void Document::Render()
     rt->EndDraw();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Rect Document::GetBounds() const
 {
     D2D1_SIZE_F size = mRenderer->GetRenderTarget()->GetSize();
     return Rect(0.0f, 0.0f, size.width, size.height);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::SetMouseCursor(Cursor cursor)
 {
     if (GetMouseCursor() == cursor) return;
 
-    SDL_Cursor* c = SDL_CreateSystemCursor(cursor == Cursor_Pointer ? SDL_SYSTEM_CURSOR_HAND : SDL_SYSTEM_CURSOR_ARROW);
+    SDL_Cursor* c = SDL_CreateSystemCursor(
+        cursor == Cursor_Pointer ? SDL_SYSTEM_CURSOR_HAND : SDL_SYSTEM_CURSOR_ARROW);
     SDL_SetCursor(c);
 
     mCursor = cursor;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 ID2D1SolidColorBrush* Document::CreateSolidColorBrush(unsigned int rgba)
 {
     auto it = mBrushCache.find(rgba);
-    if (it == mBrushCache.end())
+    if (it == mBrushCache.end()) // It wasn't created previously -> create new one
     {
         auto rt = mRenderer->GetRenderTarget();
 
@@ -330,9 +359,11 @@ ID2D1SolidColorBrush* Document::CreateSolidColorBrush(unsigned int rgba)
     return it->second;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 IDWriteTextFormat* Document::CreateTextFormat(const wchar_t* name, float size, FontWeight weight,
     FontStyle style, FontStretch stretch)
 {
+    // Check if font/format was already created/used
     for (auto& font : mFontCache)
     {
         if (font.name == name && font.size == size && font.weight == weight && font.style == style
@@ -415,6 +446,7 @@ IDWriteTextFormat* Document::CreateTextFormat(const wchar_t* name, float size, F
     return font.dwriteFormat;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
 void Document::GetFontInformation(const wchar_t* name, float size, FontWeight weight,
     FontStyle style, FontStretch stretch, float& horizAdvance, float& vertAdvance,
     IDWriteFontFace** fontFace)
